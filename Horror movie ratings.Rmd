@@ -1,0 +1,239 @@
+---
+output:
+  html_document: default
+  'output: word_document': default
+---
+
+# R und Pandas Tidy Tuesday Übungen parallel gelöst
+
+Dieses Tutorial ist für dich interessant, wenn du mithilfe konkreter Codesbeispiele mehr über die Gemeinsamkeiten des R tidyverse und Pandas erfahren willst. Als beispielshafter Datensatz soll `horror movie ratings` aus dem dem R [Tidy Tuesday](https://github.com/rfordatascience/tidytuesday)-Projekt dienen. Beim Vorgehen orientieren wir uns mit unseren Fragen zu den Daten im Code beispielhaft an David Robinson, der auf Youtube Video veröffentlicht wie er Datensätze bearbeitet, unter anderen auch [horror movie ratings](https://www.youtube.com/watch?v=yFRSTlk3kRQ).
+
+## R `library()` und Python `import X as Y`
+
+Im ersten Schritt importieren wir in R das Tidyvere, das wir zum Reinigen und Analysieren des Datensatzes benötigen. Dazu verwenden wir die Funktion `library`, um das tidyverse in das Notebook zu importieren. Zusätzlich das reticulate-package, um den Python Code auszuführen.
+
+```{r}
+#install.packages("reticulate")
+#install.packages("tidyverse")
+library(tidyverse)
+library(reticulate)
+```
+
+Im Gegensatz zu R werden in Python Module über die sogenannte `import` Funktion in den Arbeitsbereich geholt. Über das Kürzel `as` kann eine Art Schnellzugriff festgelegt werden. Die Namen der Kürzel sind überlicherweise per Konvention festgelegt.
+
+```{python}
+import pandas as pd
+print(pd.__version__)
+```
+
+Als nächstes folgt der Import des `horror movie ratings`Datensatzes. Zum Einlesen von Dateien beinhaltet das R Tidyverse das Paket `readr`. Dieses funktioniert oft reibungsloser mit den Import- Funktionen aus Base R. Mit `readr` eigelesener Code steht zudem als Tibble bereit. Als Variable verwenden wir `horror_movies_raw`.
+
+```{r}
+horror_movies_raw <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-10-22/horror_movies.csv")
+```
+
+Das Einlesen des Datensatzes geschieht in Python ganz ähnlich wie in der R Programmiersprache über eine simple Variablenzuweisung. Zu beachten ist besonders der Unterschied zwischen den Zuweisungs-Operatoren. Zwar kann wie in Python auch in R das `=` als Operator benutzt werden, üblicherweise verwendet man allerdings den Pfeil a`<-` als Zuweisungsoperator.
+
+Wir lesen den Datensatz über die Funktion `pd.read_csv()` ein und ordnen dem Ergebnis die Variable `horror_movies_raw` zu. Wie R besitzt Pandas die Fähigkeit, den ausgewählten Datensatz über eine Webadresse einzulesen, von welcher wir hier Gebrauch machen. Dabei ist darauf zu achten, bei einer Datensatz auf github immer die sogenannte "raw"-Datei, also den Rohdatensatz zu verlinken.
+
+Lesen wir URL ein und lassen uns die ersten Zeilen des Datensatzes anzeigen.
+
+```{python}
+url = r"https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-10-22/horror_movies.csv"
+
+horror_movies_raw = pd.read_csv(url) #Einlesen des Datensatzes über pd.read_csv()
+horror_movies_raw 
+```
+
+## R `head()` und Python `.head()`
+
+Fast jede Datenanalyse beginnt mit dem Anzeigen der ersten Zeilen des Datensatze, dem "Kopf" der Daten. Um eine erste Übersicht über die Struktur der Daten zu erhalten. Dies geschieht mithilfe der Funktion `head()` in R, bzw. `.head()` in Pandas. Die große Ähnlichkeit des R- und Pandas-Funktionen kann schnell zu Verwechslungen führen.
+
+```{r}
+head(horror_movies_raw, 5)
+```
+
+```{python}
+horror_movies_raw.head(5)
+```
+
+## R `arrange()` und Python `sort_values()`
+
+Nachdem wir den Datensatz erfolgreich eingelesen und einen ersten Blick auf die Daten geworfen haben, widmen wir uns der explorativen Erforschung des Datensatzes. Gehen wir mit David Robinson mit R zunächst der Frage nach, welcher der bestbewerteste Horrofilm in unserem Datensatz ist. Dazu müssen wir nur die Werte der Spalte `review_rating` absteigend sortieren. Im Tidyverse nutzen wir dazu die Funktion `arrange()`.
+
+```{r}
+horror_movies <- horror_movies_raw %>%
+  arrange(desc(review_rating))
+
+horror_movies
+```
+
+In Code verketten wir gleich zwei Befehle mithilfe des aus dem `magittr` Paket entstammenden `%>%`oder Pipe-Operator (grob "Rohrpost-Operator"). Der Pipe-Operator erlaubt den Nutzern des tidyverse Funktionen miteinander zu verketten, deren Ergebnis immer ein Datensatz ist. Auf diese Art und Weise kann ein Datensatz zeilenweise immer weiter modifiziert werden, ohne unübersichtliche, ineinander verschachtelte Ausdrücke wie `func(g(h(df), arg1=a), arg2=b, arg3=c)` verwenden zu müssen oder den Datensatz zwischen zu speichern.
+
+Inspiriert vom Pipe-Operator `%>%` hat auch Pandas seine eigene Funktion zum Verknüpfen von Funktionen erhalten, die Funktion `.pipe()`. Man sollte beachten, dass man den gesamten Ausdruck in Klammern `()` setzt, damit der verkettete Befehl ausgeführt wird. In Pandas nutzen wir `.sort_vallues`, um den Datensatz genau wie im Tidyverse absteiged zu sortieren. Über den Parameter `ascending=bool` können wir zusätzlich steuern, wie die Werte sortiert werden sollen. In diesem Fall mit `ascending=False`, also absteigend sortieren.
+
+```{python}
+horror_movies = (horror_movies_raw  #hier müssen Klammern benutzt werden
+                   .sort_values("review_rating", ascending=False))
+
+horror_movies[['title', 'review_rating']].head(3)   #Anzeigen der ersten 3 Zeilen des dataframe mit den Spalten 'title' und 'review_rating'     
+```
+
+Die Sortierung zeigt: Der bestbewerteste Film des Datensatze lautet "Bonehill Road". Um den jeweils höchsten Wert einer Spalte abzurufen, stellt Pandas sogar eine noch praktischere Methode namens `.idxmax()` bereit.
+
+```{python}
+(horror_movies
+  .loc[horror_movies['review_rating']
+  .idxmax()])
+```
+
+## R `extract()` und Python `str.extract()`
+
+David Robinson stellt sich in R als nächstes der Frage, aus welchem Zeitraum die Horror-Filme des Datensatzes eigentlich stammen. Dazu sehen wir uns in Python mit der Selektionsmethode `.iloc[]` gleich noch einmal die erste Zeile des Datensatzes an. Das kryptische erscheinende `.iloc[]` steht schlicht und einfach für "`i`nteger `loc`ation", wir wählen also einen Bereich des Datensatzes über Ganzzahlen- und nicht Zeilen oder Spaltennamen - aus.
+
+```{python}
+horror_movies_raw.iloc[0:1, :]
+```
+
+Wir stoßen gleich auf ein Problem, was die Organisation der Daten angeht: Wie kann man die horror_movies_raw$titleVerteilung der Filme anhand des Erscheinungsjahres aufzeigen, wenn gar keine "Jahr"-Spalte existiert? Wir haben zwei Möglichkeiten: Entweder man extrahiert das Jahr aus der Spalte `release_date` oder wir entnehmen das Erscheinungsjahr aus der Spalte `title`, der immer nach dem Prinzip `Filmtitel (Jahr)` aufgebaut ist. Weil das Jahr in der Spalte `title` im Gegensatz zu `release_date` bereits vierstellig vorliegt, entscheiden wir uns für `title`.  
+
+```{r}
+horror_movies <- horror_movies_raw %>%
+  extract(title, "release_year", "\\((\\d\\d\\d\\d)\\)$", remove = FALSE, convert = TRUE) %>% 
+  arrange(release_year) 
+  
+horror_movies
+```
+
+Um Worte und Zahlen aus Spalten zu extrahieren, existiert im Tidyverse die Funktion `extract()`. Dabei gibt der erste Parameter `title` die Basis für die Extraktion an, der zweite Parameter den Namen der neuen, zu erstellenden Spalte (hier: `year`) und der dritte Parameter eine regular expression, um das Jahr aus dem string heraus zu filtern.
+
+Die Verwendung einer regular expression besitzt beim Wechsel zwischen R und Python den Vorteil, dass sie größtenteils sprachenunabhängig verwendet werden kann. Was hilfreich in R ist, darf ruhigen Gewissens auch für Python und Pandas verwendet werden. Da es sich bei den Werten in der Spalte `title` um strings, also Text handelt, können wir weiterhin ein umfangreiches Arsenal an `string`-Funktionen zurückgreifen, um mithilfe von regular expressions das Jahr aus dem string in der `title`-Spalte zu extrahieren.
+
+```{python}
+horror_movies = (horror_movies_raw
+    .assign(release_year=lambda x: x['title'].str.extract("\\((\\d\\d\\d\\d)\\)$"))) #Filtern des Jahres
+
+horror_movies['release_year']
+```
+
+Achtung, alles was wir bis jetzt getan haben, ist, aus der Spalte `title` die Jahreswerte zu extrahieren und den Daten die Spalte `release_year` zuzuweisen. Eine kurze Überprüfung des Datentyps der Spalte mithilfe der `.dtypes` Funktion zeigt, wie es sich beim Typus der neuen Jahresspalte noch um einen Objekt-Typ (konkret, einen string) handelt. Warum ist das überhaupt von Bedeutung? Wenn wir die Veröffentlichungen pro Jahr später mit einem Histogramm visualisieren möchten, "versteht" das Visualisierungstool matplotlib keine Objekt-Werte, denn wie sollten Wörter sinnvoll in einem Graph angeordnet werden?
+
+```{python}
+horror_movies['release_year'].dtypes #die Spalte release_year ist ein "Objekt"-string
+```
+
+Um den Datentyp der Spalte zu ändern, müssen wir die Spalte `release_year` anhand von `pd.to_numeric()` in ein float-Objekt verwandeln, um die Daten visualisieren zu können.
+
+```{python}
+horror_movies = (horror_movies
+    .assign(release_year=lambda x: pd.to_numeric(x['release_year'])))
+
+horror_movies.release_year.dtypes #ein kurzer Test, ob die Umwandlung funktioniert hat
+```
+
+# R `qplot()` und Python `.plot.X()`
+
+Nach dieser Transformation kann der Datensatz sowohl im Tidyverse als auch in Pandas geplottet werden. Wir verwenden in R die Fnktion quickplot oder kurz `qplot()`. Weil es relativ wenig vor 2005 erschienen Filme im Datensatz existieren, beschränken wir die Auswahl auf Filme zwischen 2005 und 2020 und teilen die Filme in 10 Klassen ("bins") ein.
+
+```{r}
+qplot(horror_movies$release_year, geom = "histogram", bins = 15, xlim = c(2005,2020)) 
+```
+
+So schnell und reibungslos wie wie über `qplot()` lassen sich auch in Pandas Plots über die Funktion des jeweiligen Graphentyp erstellen, nämlich in unserem Fall `plot.hist`, also ein Histogramm. Wir entscheiden uns für 15 "bins" (Abschnitte) und plotten den Zeitraum von 2005 bis 2020.
+
+```{python}
+horror_movies.plot.hist(by='release_year', bins=15, range=[2005,2020])
+```
+
+Wir sparen noch mehr Code in Pandas, wenn wir statt `.plot.hist()` direkt auf die Methode `.hist()` zurückgreifen.
+
+```{python}
+horror_movies.hist(column='release_year', bins=15, range=[2005,2020])
+```
+
+# R `.count()` und Python `.value_counts()`
+
+Wie viele verschiedene Sprachen sind im Datensatz abgebildet? Beides lässt sich im Tidyverse und Pandas ähnlich leicht heraus finden. Zunächst das Tidyverse.
+
+```{r}
+horror_movies %>% 
+  count(language, sort = TRUE) 
+```
+
+Beide Funktionen gleichen sich in R und Python stark. Die `count()`, bzw. `.value_count()` Funktionen vereinen mehrere Arbeitschritte: Die Daten werden zunächst auf ihre singuläre Werte überprüft, dann gruppiert und schlussendlich sumiert.
+
+```{python}
+horror_movies['language'].value_counts(sort=True)
+```
+
+Im Ergebnis liegen die meisten Filme im Datensatz in den Sprachen Englisch vor und mit weitem Abstand folgen Spanisch und Japanisch. Mit der bereits erwähnten Funktion `.idxmax()` können wir den Spitzenreiter Englisch in Python auch erneut isoliert betrachten.
+
+```{python}
+(horror_movies['language']
+    .value_counts()
+    .idxmax(1))
+```
+
+# R `convert` und Python `.astype()`
+
+Abschließend wollen wir uns auf David Robinsons Vorschlag hin die Frage stellen, ob ein Zusammenhang zwischen der Höhe des Filmbudgets und der Kritiker-Bewertung besteht. Das erscheint logisch, je mehr Geld für die Produktion zur Verfügung steht, desto höher ist das Rating. Beim Blick auf die Spalte `buget` fällt jedoch auf, wie die Spalte keine reinen Zahlen sondern Dollarwerte und Zahlen enthält. Für die Darstellung im Histogramm ist es nötig, die Zahlen aus den Spalten zu isolieren und die Dollarzeichen zu entfernen. Das geht im Tidyverse wunderbar einfach dank der Funktion `mutate(column = parse_number(colum)`.
+
+```{r}
+horror_movies <- horror_movies_raw %>%
+  mutate(budget = parse_number(budget))
+```
+
+Leider läßt sich die Funktion `parse_number()` nicht eins zu eins auf Pandas übertragen. Wie schon bei der Extraktion der Jahrszahlen müssen wir alternativ auf regular expresssions zurück greifen, um die Budgets zu isolieren.
+
+```{python}
+horror_movies['budget']
+```
+
+Eine zusätzliche Herausforderung ist das Entfernen der unterschiedlichen Währungsangaben wie Dollar, Euro usw. Zudem weist die Spalte ein Drittel fehlende Werte, also NaN-Werte ("not a number"), auf.
+
+```{python}
+horror_movies = horror_movies_raw 
+```
+
+```{python}
+horror_movies = horror_movies_raw
+
+horror_movies["budget_in_numbers_only"] = (horror_movies_raw["budget"]                      
+                          .pipe(lambda x: x.str.extract(r"\D*([0-9]*[,]*[0-9]*[,]*[0-9]*)", expand=False)) #ohne expand=False wird ein Dataframe und kein Spalte an den nächsten pipe-Befehlt weiter gereicht und erzeugt einen Attribute-Fehler
+                          .pipe(lambda x: x.str.split(","))                               
+                          .pipe(lambda x: x.str.join("")))
+                          
+horror_movies["budget_in_numbers_only"]
+```
+
+# R `geom_point()` und Python `.plot.scatter()`
+
+So bleibt nur noch die Visualisierung der Werte als Histogramm, die wir in R mit dem praktischen 'ggplot' durchführen können.
+
+```{r}
+horror_movies %>%
+  ggplot(aes(budget, review_rating)) +
+  geom_point() +
+  scale_x_log10(labels = scales::dollar)
+```
+
+Mit den jetzt vorliegenden Zahlen in der Spalte `budget` können wir auch in Pandas den Zusammenhang zwischen Budget und Rating als Histogramm visualisieren. Um den Trend zu verdeutlichen, ziehen wir zusätzlich eine Approximation kleinster Quadrate.
+
+```{python}
+import matplotlib 
+
+ax  = horror_movies.plot.scatter(x="budget_in_numbers_only",
+                      y='review_rating',
+                      c='Black',
+                      logx=True)
+
+ax.set_xticks([100, 100000, 100000000])
+ax.get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
+ax.set_xticklabels(["$100", "$100,000", "$100,000,000"])
+
+ax
+```
+
+# Fazit 
+
+Abschließend hat die Analyse gezeigt, dass sich zumindest die genannten R-Analyseschritte auch in Pandas umsetzbar sind. Dass bestimmte R-Funktionen in Pandas hier oft aufwändiger "nachzubauen" scheinen, mag sicher auch damit zusammenhängen, welche Sprache den Ausgangspunkt für die Übersetzung bildet. 
